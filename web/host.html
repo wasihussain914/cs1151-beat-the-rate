@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>beat the rate — floor manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --ink:#131a22; --navy:#232f3e; --navy2:#2c3a4d; --card:#1b2532; --chip:#37475a;
+    --orange:#ff9900; --orange2:#ffb84d; --light:#eaeded; --muted:#8e9aa8;
+    --red:#ff7a63; --green:#3ec46d;
+    --shadow: 0 12px 34px rgba(0,0,0,.4);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:'Inter',-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    background: radial-gradient(1400px 800px at 50% -15%, #2c3a4d 0%, var(--navy) 50%, var(--ink) 100%);
+    color:var(--light); min-height:100vh; padding:24px 36px 32px;
+  }
+  header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:12px; }
+  .brand { display:flex; flex-direction:column; }
+  .wordmark { font-weight:900; font-size:2rem; letter-spacing:-.02em; line-height:1; }
+  .wordmark em { font-style:normal; color:var(--orange); }
+  .brand svg { width:124px; margin-top:4px; }
+  .controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  #clock { font-size:2.1rem; font-weight:900; font-variant-numeric:tabular-nums; min-width:86px; text-align:right; }
+  #clock.low { color:var(--red); animation:blink 1s infinite; }
+  @keyframes blink { 50% { opacity:.3; } }
+  .btn {
+    background:linear-gradient(180deg,var(--orange2),var(--orange)); color:#1a1205; font-weight:800;
+    border:0; border-radius:999px; padding:11px 20px; font-size:.92rem; font-family:inherit; cursor:pointer;
+    box-shadow:0 5px 14px rgba(255,153,0,.28), inset 0 1px 0 rgba(255,255,255,.35); transition:transform .12s;
+  }
+  .btn:active { transform:scale(.96); }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid #46586e; box-shadow:none; }
+  .btn.danger { background:linear-gradient(180deg,#ff8a70,#e4573d); color:#2a0c05; box-shadow:0 5px 14px rgba(228,87,61,.3); }
+  #modetag { font-size:.78rem; font-weight:800; letter-spacing:.1em; color:var(--orange2); border:1px solid rgba(255,153,0,.4); padding:6px 12px; border-radius:999px; }
+
+  #clockbar { height:9px; background:var(--card); border-radius:5px; margin:4px 0 20px; overflow:hidden; }
+  #clockfill { height:100%; width:100%; background:linear-gradient(90deg,var(--orange),var(--orange2)); transition:width 1s linear; border-radius:5px; }
+
+  #overbanner {
+    display:none; margin:0 0 16px; padding:14px 22px; border-radius:14px; text-align:center;
+    background:rgba(255,153,0,.1); border:1px solid rgba(255,153,0,.45); font-size:1.2rem; font-weight:800;
+  }
+  #overbanner b { color:var(--orange); }
+
+  main { display:grid; grid-template-columns:300px 1fr 320px; gap:18px; }
+  .card { background:rgba(27,37,50,.88); border:1px solid rgba(255,255,255,.055); border-radius:16px; padding:20px; box-shadow:var(--shadow); }
+  .card h2 { font-size:.72rem; letter-spacing:.18em; color:var(--orange); margin-bottom:13px; font-weight:800; }
+
+  #qr { background:#fff; padding:12px; width:fit-content; border-radius:10px; margin:0 auto; box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  .joinurl { text-align:center; margin-top:11px; color:var(--light); font-size:1rem; font-weight:700; }
+  .joinurl span { color:var(--orange); }
+  .bignum { font-size:4.2rem; font-weight:900; color:var(--orange); text-align:center; line-height:1; margin-top:20px; font-variant-numeric:tabular-nums; transition:transform .25s; }
+  .bignum.bump { transform:scale(1.12); }
+  .bigsub { display:block; text-align:center; font-size:.68rem; color:var(--muted); font-weight:700; letter-spacing:.16em; margin-top:7px; }
+  .duo { display:flex; justify-content:space-around; margin-top:20px; text-align:center; }
+  .duo b { font-size:2rem; display:block; font-variant-numeric:tabular-nums; }
+  .duo span { font-size:.66rem; color:var(--muted); letter-spacing:.14em; font-weight:700; }
+  .duo .dead b { color:var(--red); } .duo .alive b { color:var(--green); }
+
+  /* leaderboard */
+  #board { display:flex; flex-direction:column; gap:7px; max-height:70vh; overflow:auto; padding-right:4px; }
+  #board::-webkit-scrollbar { width:6px; } #board::-webkit-scrollbar-thumb { background:var(--chip); border-radius:3px; }
+  .row {
+    display:grid; grid-template-columns:44px 1fr auto auto; gap:10px; align-items:center;
+    background:var(--chip); border-radius:10px; padding:9px 14px; border-left:4px solid var(--green);
+    transition:opacity .4s;
+  }
+  .row.dead { border-left-color:var(--red); opacity:.45; background:#2e211d; }
+  .row .rank { font-weight:900; font-size:1.05rem; color:var(--muted); }
+  .row .rank.m { font-size:1.3rem; }
+  .row .nm { font-weight:800; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .nm small { display:block; font-weight:600; font-size:.72rem; color:var(--muted); }
+  .row .picks { font-weight:900; font-variant-numeric:tabular-nums; font-size:1.1rem; }
+  .row .rate { color:var(--muted); font-size:.82rem; font-variant-numeric:tabular-nums; min-width:70px; text-align:right; }
+  .row .rate b { color:var(--green); }
+  .row.dead .rate b { color:var(--red); }
+  #empty { color:var(--muted); text-align:center; padding:30px 0; }
+
+  #feed { max-height:64vh; overflow:auto; font-size:.9rem; }
+  #feed .t { padding:9px 2px; border-bottom:1px solid #27354a; color:var(--red); animation:slidein .35s cubic-bezier(.2,.9,.3,1); line-height:1.45; }
+  #feed .t small { color:var(--muted); display:block; font-size:.74rem; }
+  @keyframes slidein { from { opacity:0; transform:translateX(26px); } to { opacity:1; transform:none; } }
+  #feedempty { color:var(--muted); padding:8px 0; font-size:.9rem; }
+
+  /* restructuring overlay */
+  #layoffscrim {
+    display:none; position:fixed; inset:0; z-index:50; background:rgba(10,13,18,.96);
+    flex-direction:column; align-items:center; justify-content:center; padding:48px; text-align:center;
+  }
+  #layoffscrim.on { display:flex; animation:fadein .6s; }
+  @keyframes fadein { from { opacity:0; } }
+  #layoffscrim h1 { font-size:3rem; font-weight:900; letter-spacing:.04em; color:var(--red); margin-bottom:10px; }
+  #layoffscrim .memo { color:var(--muted); font-size:1.15rem; max-width:860px; line-height:1.6; margin-bottom:34px; }
+  #layoffscrim .memo b { color:var(--light); }
+  #layoffscrim .memo em { color:var(--orange); font-style:normal; font-weight:800; }
+  #laidnames { display:flex; flex-wrap:wrap; gap:14px 26px; justify-content:center; max-width:1100px; margin-bottom:40px; }
+  #laidnames span {
+    font-size:1.7rem; font-weight:800; color:#ffb3a5; text-decoration:line-through;
+    text-decoration-color:rgba(228,87,61,.75); text-decoration-thickness:3px;
+    animation:fadeup .5s backwards;
+  }
+  @keyframes fadeup { from { opacity:0; transform:translateY(12px); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="wordmark">beat the <em>rate</em></div>
+    <svg viewBox="0 0 120 30"><path d="M6 8 C 36 30, 84 30, 108 12" fill="none" stroke="#ff9900" stroke-width="6" stroke-linecap="round"/><path d="M100 4 L 112 10 L 101 19" fill="none" stroke="#ff9900" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div class="controls">
+    <span id="modetag">LOBBY</span>
+    <span id="clock">90s</span>
+    <button class="btn" data-mode="classic">▶ R1 First Shift</button>
+    <button class="btn" data-mode="bombs">▶ R2 Peak Season 💣</button>
+    <button class="btn" data-mode="visible">▶ R3 Glass Warehouse</button>
+    <button class="btn danger" id="layoffbtn">📉 Restructure</button>
+    <button class="btn ghost" id="resetbtn">Reset</button>
+  </div>
+</header>
+<div id="clockbar"><div id="clockfill"></div></div>
+<div id="overbanner">SHIFT OVER — <b id="survcount">0</b> of <b id="totcount">0</b> associates survived the algorithm</div>
+
+<main>
+  <div class="card">
+    <h2>CLOCK IN</h2>
+    <div id="qr"></div>
+    <div class="joinurl">wasihussain.com/<span>cs1151</span></div>
+    <div class="bignum" id="req" title="Click to reveal/hide (for the debrief)" style="cursor:pointer">––</div>
+    <span class="bigsub" id="reqlabel">REQUIRED PICKS / MIN · CLASSIFIED</span>
+    <div class="duo">
+      <div class="alive"><b id="alive">0</b><span>EMPLOYED</span></div>
+      <div class="dead"><b id="dead">0</b><span>TERMINATED</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>LEADERBOARD</h2>
+    <div id="board"><div id="empty">Waiting for associates to clock in…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>TERMINATION FEED</h2>
+    <div id="feed"><div id="feedempty">No terminations yet. The system is patient.</div></div>
+  </div>
+</main>
+
+<div id="layoffscrim">
+  <h1>CORPORATE RESTRUCTURING</h1>
+  <p class="memo">A message from leadership: this quarter the company grew revenue <em>+12%</em> and deployed its <em>one millionth robot</em>. As we get efficiency gains from using AI extensively across the company, <b>we will need fewer people doing some of the jobs that are being done today.</b><br><br>The following positions have been eliminated. This is not a reflection of performance.</p>
+  <div id="laidnames"></div>
+  <button class="btn" onclick="document.getElementById('layoffscrim').classList.remove('on')">Continue the discussion →</button>
+</div>
+
+<script>
+const API = "https://admin.wasihussain.com/cs1151";
+const KEY = new URLSearchParams(location.search).get("key") || "";
+new QRCode(document.getElementById("qr"), {text:"https://wasihussain.com/cs1151/", width:160, height:160, correctLevel:QRCode.CorrectLevel.M});
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let lastFired = 0, lastReq = 20, layoffShown = false, reqRevealed = false;
+$("req").onclick = () => { reqRevealed = !reqRevealed; };
+const MODES = {classic:"R1 · FIRST SHIFT", bombs:"R2 · PEAK SEASON 💣", visible:"R3 · GLASS WAREHOUSE"};
+const REASONS = {rate:"below benchmark · no supervisor input", injury:"third safety incident", restructuring:"position eliminated"};
+const clearFeed = () => { $("feed").innerHTML = '<div id="feedempty">No terminations yet. The system is patient.</div>'; lastFired = 0; };
+
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () =>
+  fetch(API+"/start", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:KEY, mode:b.dataset.mode})})
+  .then(r=>r.json()).then(d=>{
+    if(!d.ok) alert("Bad host key — open this page with ?key=YOURKEY");
+    else { clearFeed(); layoffShown=false; $("overbanner").style.display="none"; $("layoffscrim").classList.remove("on"); }
+  }));
+
+$("layoffbtn").onclick = () => {
+  if (!confirm("Run the restructuring? The bottom half of surviving associates will be laid off.")) return;
+  fetch(API+"/layoff", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:KEY})})
+  .then(r=>r.json()).then(d=>{ if(!d.ok) alert(d.error==="round still running" ? "Round is still running — wait for the clock to hit 0, then restructure." : "Bad host key"); });
+};
+
+$("resetbtn").onclick = () => {
+  if (!confirm("Reset the whole game? Everyone will need to rejoin.")) return;
+  fetch(API+"/reset", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:KEY})})
+  .then(()=>{ clearFeed(); layoffShown=false; $("overbanner").style.display="none"; $("layoffscrim").classList.remove("on"); });
+};
+
+function showLayoff(names) {
+  $("laidnames").innerHTML = names.map((n,i) => `<span style="animation-delay:${.4 + i*.5}s">${esc(n)}</span>`).join("");
+  $("layoffscrim").classList.add("on");
+}
+
+async function tick() {
+  try {
+    const d = await (await fetch(API+"/state")).json();
+    const req = Math.round(d.required);
+    const showReq = d.mode === "visible" || reqRevealed;
+    if (showReq && req !== lastReq) { $("req").classList.add("bump"); setTimeout(()=>$("req").classList.remove("bump"), 260); }
+    lastReq = req;
+    $("req").textContent = showReq ? req : "––";
+    $("reqlabel").textContent = showReq ? "REQUIRED PICKS / MIN" : "REQUIRED PICKS / MIN · CLASSIFIED";
+    $("alive").textContent = d.alive;
+    $("dead").textContent = d.total - d.alive;
+    $("clock").textContent = d.time_left + "s";
+    $("clock").classList.toggle("low", d.running && d.time_left <= 15);
+    $("clockfill").style.width = (d.time_left/(d.round_secs||90)*100) + "%";
+    $("modetag").textContent = d.mode ? MODES[d.mode] + (d.over ? " · OVER" : "") : "LOBBY";
+
+    const medals = ["🥇","🥈","🥉"];
+    $("board").innerHTML = d.players.length ? d.players.map((p,i) =>
+      `<div class="row ${p.status==='terminated'?'dead':''}">
+         <div class="rank ${i<3?'m':''}">${i<3 ? medals[i] : '#'+(i+1)}</div>
+         <div class="nm">${esc(p.name)}<small>Σ ${p.total} total${p.strikes?` · 💥 ${p.strikes}`:''}${p.violations?` · ⚠ ${p.violations} flags`:''}${p.status==='terminated'?` · ${REASONS[p.reason]||'terminated'}`:''}</small></div>
+         <div class="picks">${p.picks}</div>
+         <div class="rate">${p.status==='terminated' ? '<b>✖ laid off</b>' : '<b>'+p.rate+'</b>/min'}</div>
+       </div>`).join("") : '<div id="empty">Waiting for associates to clock in…</div>';
+
+    if (d.fired_order.length > lastFired) {
+      if ($("feedempty")) $("feedempty").remove();
+      for (let i=lastFired; i<d.fired_order.length; i++) {
+        const f = d.fired_order[i];
+        const nm = typeof f === "string" ? f : f.name;
+        const rs = typeof f === "string" ? "rate" : f.reason;
+        $("feed").insertAdjacentHTML("afterbegin",
+          `<div class="t">${rs==='restructuring'?'📉':rs==='injury'?'💥':'❌'} <b>${esc(nm)}</b> — ${rs==='restructuring'?'laid off':'terminated by system'}<small>${esc(REASONS[rs]||'')} · not eligible for appeal</small></div>`);
+      }
+      lastFired = d.fired_order.length;
+    }
+    if (d.laid_off.length && !layoffShown) { layoffShown = true; showLayoff(d.laid_off); }
+    if (d.over && d.total) {
+      $("overbanner").style.display = "block";
+      $("survcount").textContent = d.alive;
+      $("totcount").textContent = d.total;
+    } else $("overbanner").style.display = "none";
+  } catch(e) {}
+  setTimeout(tick, 1000);
+}
+tick();
+</script>
+</body>
+</html>

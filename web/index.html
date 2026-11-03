@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#131a22">
+<title>beat the rate — associate portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#131a22; --navy:#232f3e; --navy2:#2c3a4d; --card:#37475a;
+    --orange:#ff9900; --orange2:#ffb84d; --light:#eaeded; --muted:#8e9aa8;
+    --red:#e4573d; --green:#3ec46d;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body {
+    font-family:'Inter',-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    background: radial-gradient(1200px 700px at 50% -10%, #2c3a4d 0%, var(--navy) 45%, var(--ink) 100%);
+    color:var(--light); height:100dvh; overflow:hidden; touch-action:manipulation;
+  }
+  .screen { display:none; height:100dvh; flex-direction:column; align-items:center; justify-content:center; padding:28px 22px; text-align:center; }
+  .screen.on { display:flex; animation:fadeUp .45s cubic-bezier(.2,.9,.3,1); }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+
+  .wordmark { font-weight:900; font-size:1.9rem; letter-spacing:-.02em; line-height:1; }
+  .wordmark em { font-style:normal; color:var(--orange); }
+  .smile { width:120px; margin:4px auto 20px; display:block; }
+
+  .sub { color:var(--muted); font-size:.95rem; max-width:400px; line-height:1.55; margin-bottom:26px; }
+  .sub b { color:var(--light); }
+
+  input {
+    width:100%; max-width:320px; padding:15px 18px; font-size:1.05rem; font-family:inherit;
+    border-radius:12px; border:1.5px solid #46586e; background:rgba(19,26,34,.7); color:var(--light);
+    text-align:center; margin-bottom:14px; outline:none; transition:border-color .2s, box-shadow .2s;
+  }
+  input:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,153,0,.22); }
+  .btn {
+    background:linear-gradient(180deg, var(--orange2), var(--orange));
+    color:#1a1205; border:0; border-radius:999px; padding:15px 40px;
+    font-size:1.05rem; font-weight:800; font-family:inherit; cursor:pointer;
+    box-shadow:0 6px 18px rgba(255,153,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
+    transition:transform .12s, box-shadow .2s;
+  }
+  .btn:active { transform:scale(.96); }
+
+  .badge {
+    background:linear-gradient(160deg, #3b4d63, #2c3a4d); border-radius:16px; padding:22px 26px;
+    box-shadow:var(--shadow); max-width:330px; width:100%; margin-top:8px; text-align:left;
+    border:1px solid rgba(255,255,255,.07); position:relative; overflow:hidden;
+  }
+  .badge::before { content:""; position:absolute; top:0; left:0; right:0; height:5px; background:var(--orange); }
+  .badge .co { font-size:.68rem; letter-spacing:.22em; color:var(--muted); font-weight:700; }
+  .badge .nm { font-size:1.5rem; font-weight:800; margin:8px 0 2px; }
+  .badge .rl { font-size:.8rem; color:var(--orange2); font-weight:600; margin-bottom:16px; }
+  .barcode { height:36px; background:repeating-linear-gradient(90deg,#eaeded 0 2px,transparent 2px 5px,#eaeded 5px 6px,transparent 6px 10px); border-radius:2px; opacity:.85; }
+  .pulse-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); margin-right:7px; animation:blink 1.4s infinite; }
+  @keyframes blink { 50% { opacity:.25; } }
+  .waitnote { margin-top:22px; font-size:.85rem; color:var(--muted); }
+
+  /* ====== game ====== */
+  #s-game { justify-content:flex-start; padding:0; }
+  #hud {
+    width:100%; display:flex; justify-content:space-between; gap:6px; padding:12px 14px 10px;
+    background:rgba(19,26,34,.92); backdrop-filter:blur(8px); z-index:5;
+  }
+  .stat { text-align:center; flex:1; }
+  .stat b { display:block; font-size:1.25rem; font-weight:800; font-variant-numeric:tabular-nums; }
+  .stat span { font-size:.62rem; letter-spacing:.14em; color:var(--muted); font-weight:600; }
+  #reqv { color:var(--orange); } #clock.low { color:var(--red); animation:blink 1s infinite; }
+  #myrate.danger { color:var(--red); }
+  #strikestat { display:none; } #strikestat b { color:var(--red); }
+
+  #quotabanner {
+    display:none; width:100%; padding:7px; text-align:center; background:rgba(255,153,0,.14);
+    border-bottom:1px solid rgba(255,153,0,.4); color:var(--orange2); font-weight:800; font-size:.8rem;
+    letter-spacing:.08em; z-index:5;
+  }
+  #totwrap { width:100%; padding:8px 14px 10px; background:rgba(19,26,34,.92); z-index:5; }
+  #totlabel { display:flex; justify-content:space-between; font-size:.62rem; letter-spacing:.14em; color:var(--muted); font-weight:700; margin-bottom:4px; }
+  #totbar { height:7px; background:#1b2532; border-radius:4px; overflow:hidden; }
+  #totfill { height:100%; width:0%; background:var(--green); border-radius:4px; transition:width .2s linear, background .3s; }
+
+  #floor { position:relative; flex:1; width:100%; overflow:hidden; }
+  .lane { position:absolute; left:0; right:0; height:1px; background:rgba(255,255,255,.045); }
+  .pkg, .bomb {
+    position:absolute; width:84px; height:84px; font-size:52px; line-height:84px; text-align:center;
+    cursor:pointer; user-select:none; filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));
+    animation:pop .18s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes pop { from { transform:scale(.3); opacity:0; } to { transform:scale(1); opacity:1; } }
+  .pkg.got { animation:zap .22s forwards; pointer-events:none; }
+  @keyframes zap { to { transform:scale(1.6) rotate(10deg); opacity:0; } }
+  .bomb.boom { animation:boom .35s forwards; pointer-events:none; }
+  @keyframes boom { 30% { transform:scale(1.7); } to { transform:scale(.2); opacity:0; } }
+  .plus1 { position:absolute; font-weight:900; color:var(--orange); font-size:1.2rem; pointer-events:none; animation:rise .7s forwards; text-shadow:0 2px 6px rgba(0,0,0,.6); }
+  @keyframes rise { to { transform:translateY(-46px); opacity:0; } }
+  #injurytoast {
+    position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); z-index:7;
+    background:rgba(228,87,61,.92); color:#fff; font-weight:900; font-size:1.1rem; letter-spacing:.1em;
+    padding:14px 26px; border-radius:12px; visibility:hidden; box-shadow:var(--shadow);
+  }
+  #ratewarn {
+    position:fixed; bottom:16px; left:14px; right:14px; z-index:6; text-align:center;
+    background:rgba(228,87,61,.14); border:1px solid rgba(228,87,61,.5); color:#ff9d8f;
+    font-weight:800; font-size:.85rem; letter-spacing:.06em; padding:10px; border-radius:10px;
+    visibility:hidden;
+  }
+  body.shake { animation:shake .5s; }
+  @keyframes shake { 10%,90% {transform:translateX(-2px)} 20%,80% {transform:translateX(3px)} 30%,70% {transform:translateX(-5px)} 40%,60% {transform:translateX(5px)} 50% {transform:translateX(-3px)} }
+  body.redflash::after { content:""; position:fixed; inset:0; background:rgba(228,87,61,.3); z-index:8; pointer-events:none; animation:flashout .4s forwards; }
+  @keyframes flashout { to { opacity:0; } }
+
+  #fired { background:radial-gradient(900px 600px at 50% 0%, #4a1c12 0%, #2a0f0a 55%, #170705 100%); }
+  .stamp {
+    font-size:1.9rem; font-weight:900; color:var(--red); border:5px solid var(--red); border-radius:10px;
+    padding:10px 26px; letter-spacing:.08em; transform:rotate(-8deg) scale(3); opacity:0;
+    animation:stamp .5s .25s cubic-bezier(.2,1.1,.3,1) forwards; margin-bottom:22px;
+  }
+  @keyframes stamp { to { transform:rotate(-8deg) scale(1); opacity:1; } }
+  .notice {
+    background:rgba(19,26,34,.75); border:1px solid #58302a; border-radius:14px; padding:20px 22px;
+    max-width:410px; font-size:.92rem; text-align:left; color:#d8c7c2; line-height:1.6; box-shadow:var(--shadow);
+  }
+  .notice em { color:#ff9d8f; font-style:normal; font-weight:700; }
+
+  #survive { background:radial-gradient(900px 600px at 50% 0%, #11381f 0%, #0d2416 55%, #081209 100%); }
+  .big { font-size:3.4rem; font-weight:900; color:var(--orange); margin:8px 0 2px; font-variant-numeric:tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0"><defs>
+  <symbol id="smilepath" viewBox="0 0 120 30">
+    <path d="M6 8 C 36 30, 84 30, 108 12" fill="none" stroke="#ff9900" stroke-width="6" stroke-linecap="round"/>
+    <path d="M100 4 L 112 10 L 101 19" fill="none" stroke="#ff9900" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</defs></svg>
+
+<section id="s-join" class="screen on">
+  <div class="wordmark">beat the <em>rate</em></div>
+  <svg class="smile"><use href="#smilepath" width="120" height="30"/></svg>
+  <p class="sub">Welcome to your first shift at the fulfillment center. Enter your name to receive your associate badge.<br><b>Productivity expectations apply immediately.</b></p>
+  <input id="name" maxlength="20" placeholder="First name" autocomplete="off" enterkeyhint="go">
+  <button class="btn" id="joinbtn">Clock in</button>
+  <p class="waitnote" id="joinerr" style="display:none; color:#ff9d8f;"></p>
+</section>
+
+<section id="s-wait" class="screen">
+  <div class="badge">
+    <div class="co">FULFILLMENT CENTER FGH-258 · ASSOCIATE BADGE</div>
+    <div class="nm" id="wname">—</div>
+    <div class="rl">Tier-1 Picker · Shift 1</div>
+    <div class="barcode"></div>
+  </div>
+  <p class="waitnote"><span class="pulse-dot"></span>Badge active. Your shift begins when the floor manager opens the round — <b>keep this screen open.</b></p>
+  <p class="waitnote" style="opacity:.7">Your scan rate is continuously recorded and compared against facility benchmarks.</p>
+</section>
+
+<section id="s-game" class="screen">
+  <div id="hud">
+    <div class="stat"><b id="picks">0</b><span>PICKED</span></div>
+    <div class="stat"><b id="reqv">––</b><span>REQUIRED/MIN</span></div>
+    <div class="stat"><b id="myrate">0</b><span>YOUR RATE</span></div>
+    <div class="stat" id="strikestat"><b id="strikes">0</b><span>INJURIES</span></div>
+    <div class="stat"><b id="clock">90</b><span>SECONDS</span></div>
+  </div>
+  <div id="quotabanner">FULL TRANSPARENCY MODE — QUOTA AND RATCHET RULE ARE PUBLIC</div>
+  <div id="totwrap">
+    <div id="totlabel"><span>TIME OFF TASK</span><span id="totpct">0%</span></div>
+    <div id="totbar"><div id="totfill"></div></div>
+  </div>
+  <div id="floor"></div>
+  <div id="injurytoast">💥 INJURY RECORDED</div>
+  <div id="ratewarn">⚠ SCAN RATE BELOW FACILITY BENCHMARK</div>
+</section>
+
+<section id="fired" class="screen">
+  <div class="stamp" id="stamptext">TERMINATED</div>
+  <div class="notice" id="firednotice"></div>
+  <p class="waitnote">Eyes up front — the floor manager has more to say.</p>
+</section>
+
+<section id="survive" class="screen">
+  <div class="wordmark" style="font-size:1.3rem">PERFORMANCE REVIEW</div>
+  <div class="big" id="spicks">0</div>
+  <p class="sub" style="margin-top:4px">packages picked. <b>You outworked the algorithm — this round.</b><br><br>Note: next quarter's benchmark has been raised to your pace. Congratulations.</p>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script>
+const API = "https://admin.wasihussain.com/cs1151";
+let pid=null, name="", picks=0, strikes=0, lastTap=Date.now(), dead=false, started=false, over=false, mode="classic";
+
+const $ = id => document.getElementById(id);
+const show = id => { document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on")); $(id).classList.add("on"); };
+
+const NOTICES = {
+  rate: n => `Associate <em>${n}</em>,<br><br>Your scan rate fell below facility benchmarks. This decision was <em>generated automatically by the productivity system, without input from supervisors.</em><br><br>Final count: <em>${picks}</em> packages.<br><br>This decision is not eligible for appeal. Thank you for your contribution.`,
+  injury: n => `Associate <em>${n}</em>,<br><br>Following your <em>third recorded safety incident</em>, your employment has been ended. The system has determined the incidents resulted from <em>your failure to exercise due care</em>, not from pace requirements.<br><br>Final count: <em>${picks}</em> packages.<br><br>This decision is not eligible for appeal. Please recover in your own time.`,
+  restructuring: n => `Associate <em>${n}</em>,<br><br>Your position has been <em>eliminated</em> as part of a company-wide efficiency initiative. This is <em>not a reflection of your performance</em> — in fact, you survived every round.<br><br>Company revenue this quarter: <em>+12%</em>.<br><br>We thank you for your contribution and wish you the best in your future endeavors.`,
+};
+const STAMPS = { rate: "TERMINATED", injury: "UNSAFE", restructuring: "LAID OFF" };
+
+function terminateScreen(reason) {
+  dead = true;
+  $("stamptext").textContent = STAMPS[reason] || "TERMINATED";
+  $("firednotice").innerHTML = NOTICES[reason] ? NOTICES[reason](name) : NOTICES.rate(name);
+  if (navigator.vibrate) navigator.vibrate([220,90,220]);
+  document.body.classList.add("shake");
+  setTimeout(()=>document.body.classList.remove("shake"), 600);
+  show("fired");
+}
+
+$("name").addEventListener("keydown", e => { if (e.key==="Enter") $("joinbtn").click(); });
+$("joinbtn").onclick = async () => {
+  name = $("name").value.trim();
+  if (!name) { $("name").focus(); return; }
+  $("joinbtn").disabled = true;
+  try {
+    const r = await fetch(API+"/join", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name})});
+    const d = await r.json();
+    if (!d.ok) throw 0;
+    pid = d.player_id; $("wname").textContent = name;
+    show("s-wait"); poll();
+  } catch(e) {
+    $("joinbtn").disabled = false;
+    $("joinerr").style.display="block";
+    $("joinerr").textContent = "Couldn't reach the warehouse — flag down the presenter.";
+  }
+};
+
+function spawnThing() {
+  const floor = $("floor");
+  const isBomb = mode==="bombs" && Math.random() < 0.22;
+  const el = document.createElement("div");
+  el.className = isBomb ? "bomb" : "pkg";
+  el.textContent = isBomb ? "💣" : "📦";
+  const W = Math.max(floor.clientWidth-96, 40), H = Math.max(floor.clientHeight-110, 40);
+  const x = 6+Math.random()*W, y = 6+Math.random()*H;
+  el.style.left = x+"px"; el.style.top = y+"px";
+  let expired = false;
+  if (isBomb) {
+    setTimeout(()=>{ if(!el.classList.contains("boom")) { expired=true; el.remove(); if(!dead&&!over) spawnThing(); } }, 2300);
+  }
+  el.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    if (dead||over||expired) return;
+    lastTap = Date.now();
+    if (isBomb) {
+      el.classList.add("boom");
+      strikes++;
+      $("strikes").textContent = strikes;
+      $("injurytoast").style.visibility = "visible";
+      document.body.classList.add("redflash");
+      if (navigator.vibrate) navigator.vibrate(180);
+      setTimeout(()=>{ $("injurytoast").style.visibility="hidden"; document.body.classList.remove("redflash"); el.remove(); }, 650);
+      spawnThing();
+      beatNow();  // report the strike immediately
+    } else {
+      if (el.classList.contains("got")) return;
+      picks++; $("picks").textContent = picks;
+      el.classList.add("got");
+      const p1 = document.createElement("div");
+      p1.className="plus1"; p1.textContent="+1";
+      p1.style.left=(x+28)+"px"; p1.style.top=(y-6)+"px";
+      floor.appendChild(p1);
+      setTimeout(()=>{el.remove(); p1.remove();}, 700);
+      spawnThing();
+      if (mode==="bombs" && Math.random()<0.3
+          && document.querySelectorAll('.pkg:not(.got),.bomb:not(.boom)').length < 6) spawnThing();  // busier floor in bombs mode, capped
+    }
+  });
+  floor.appendChild(el);
+}
+
+function lanes() {
+  const floor=$("floor");
+  for (let i=1;i<6;i++) {
+    const l=document.createElement("div"); l.className="lane"; l.style.top=(i*100/6)+"%"; floor.appendChild(l);
+  }
+}
+
+function totLoop() {
+  if (dead||over) return;
+  const idle = (Date.now()-lastTap)/1000;
+  const pct = Math.min(100, idle/2.5*100);
+  $("totfill").style.width = pct+"%";
+  $("totpct").textContent = Math.round(pct)+"%";
+  $("totfill").style.background = pct>70 ? "var(--red)" : pct>35 ? "var(--orange)" : "var(--green)";
+  if (navigator.vibrate && pct>=100 && Math.floor(idle*2)%2===0) navigator.vibrate(50);
+  requestAnimationFrame(totLoop);
+}
+
+let rateHist = [];
+function myRate() {
+  rateHist.push([Date.now(), picks]); rateHist = rateHist.slice(-8);
+  if (rateHist.length<2) return 0;
+  const [t0,p0]=rateHist[0], [t1,p1]=rateHist[rateHist.length-1];
+  return Math.round((p1-p0)/Math.max((t1-t0)/1000,.5)*60);
+}
+
+async function beatNow() {
+  try {
+    const r = await fetch(API+"/beat", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({player_id:pid, picks, strikes})});
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function poll() {
+  const d = await beatNow();
+  if (d) {
+    mode = d.mode || mode;
+    if (d.running && !started) {
+      started=true; over=false; dead=false; picks=0; strikes=0; rateHist=[];
+      $("picks").textContent="0"; $("strikes").textContent="0";
+      $("floor").innerHTML=""; show("s-game"); lanes(); spawnThing(); lastTap=Date.now(); totLoop();
+      clearInterval(window.__floorWatch);
+      window.__floorWatch = setInterval(()=>{
+        if (dead||over) return;
+        if (!document.querySelector(".pkg:not(.got), .bomb:not(.boom)")) spawnThing();
+      }, 1200);
+      $("strikestat").style.display = mode==="bombs" ? "block" : "none";
+      $("quotabanner").style.display = mode==="visible" ? "block" : "none";
+    }
+    if (!dead && d.status === "terminated") {
+      terminateScreen(d.reason || "rate");
+    } else if (started && !d.running && d.over && !over) {
+      over = true;
+      started = false;   // re-arm so the next round start pulls this player back in
+      if (!dead) {
+        $("spicks").textContent = picks; show("survive");
+        if (window.confetti) confetti({particleCount:120, spread:75, origin:{y:.65}, colors:["#ff9900","#ffb84d","#eaeded"]});
+      }
+    }
+    if (d.running) over = false;
+    if (started && !dead && !over) {
+      $("reqv").textContent = mode==="visible" ? Math.round(d.required) : "––";  // quota only public in Glass Warehouse
+      $("clock").textContent = d.time_left;
+      $("clock").classList.toggle("low", d.time_left<=15);
+      const mr = myRate();
+      $("myrate").textContent = mr;
+      const danger = mode==="visible" && mr < d.required && ((d.round_secs||90)-d.time_left) > 8;
+      $("myrate").classList.toggle("danger", danger);
+      $("ratewarn").style.visibility = danger ? "visible" : "hidden";
+    }
+  }
+  // keep polling even after round end — the restructuring wave can still reach you
+  setTimeout(poll, (started && !over && !dead) ? 1500 : 2800);
+}
+</script>
+</body>
+</html>
